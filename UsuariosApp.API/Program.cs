@@ -24,3 +24,6 @@ app.UseAuthorization();
 app.MapControllers();
 
 app.Run();
+
+//definindo a classe Program.cs como pública
+public partial class Program { }

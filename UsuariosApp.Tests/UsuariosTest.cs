@@ -98,6 +98,12 @@ namespace UsuariosApp.Tests
                 .PostAsync("/api/usuarios/autenticar", TestHelper.Serialize(request)).Result;
             response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
         }
+
+        [Fact(Skip = "Não implementado")]
+        public void ObterDadosComSucesso()
+        {
+
+        }
     }
 }
 

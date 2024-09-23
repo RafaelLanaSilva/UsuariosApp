@@ -1,8 +1,11 @@
-﻿using Microsoft.AspNetCore.Http;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using UsuariosApp.API.Models.Requests;
 using UsuariosApp.API.Models.Responses;
+using UsuariosApp.API.Models.Services;
 using UsuariosApp.API.Security;
+using UsuariosApp.API.Services;
 using UsuariosApp.Data.Entities;
 using UsuariosApp.Data.Helpers;
 using UsuariosApp.Data.Repositories;
@@ -42,6 +45,16 @@ namespace UsuariosApp.API.Controllers
 
                 //gravando o usuário no banco de dados
                 usuarioRepository.Add(usuario);
+
+                //escrevendo a mensagem de boas vindas que será enviada para o usuário
+                var emailServiceModel = new EmailServiceModel();
+                emailServiceModel.EmailDestinatario = usuario.Email;
+                emailServiceModel.Assunto = "Confirmação de Cadastro de Usuário - COTI Informática";
+                emailServiceModel.Mensagem = $"Olá, {usuario.Nome}. \nSua conta foi criada com sucesso.\n\nEquipe COTI.";
+
+                //enviando para o servidor da mensageria
+                var rabbitMQProducer = new RabbitMQProducer();
+                rabbitMQProducer.SendMessage(emailServiceModel);
 
                 //retornando os dados do usuário criado
                 var response = new CriarUsuarioResponse();
@@ -99,11 +112,35 @@ namespace UsuariosApp.API.Controllers
             }
         }
 
+        [Authorize]
         [HttpGet]
         [Route("obter-dados")]
         public IActionResult ObterDados()
         {
-            return Ok();
+            try
+            {
+                //obtendo a chave do usuário contido no TOKEN:
+                var email = User.Identity.Name;
+
+                //consultando os dados do usuário baseado no email obtido
+                var usuarioRepository = new UsuarioRepository();
+                var usuario = usuarioRepository.GetByEmail(email);
+
+                //retornando os dados do usuário
+                var response = new ObterDadosUsuarioResponse();
+                response.Id = usuario.Id;
+                response.Nome = usuario.Nome;
+                response.Email = usuario.Email;
+                response.Perfil = usuario.Perfil.Nome;
+
+                //retornando os dados do usuário
+                return StatusCode(200, response);
+            }
+            catch (Exception e)
+            {
+                //HTTP 500 (INTERNAL SERVER ERROR)
+                return StatusCode(500, new { e.Message });
+            }
         }
     }
 }
